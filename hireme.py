@@ -1,4 +1,4 @@
-import requests
+import requests, random
 from functools import wraps
 from flask import Flask, redirect, request, session
 
@@ -14,7 +14,6 @@ app.secret_key = b'ssssssssssssss'
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        print(f'session:{session}')
         if 'client_id' not in session:
             return redirect('/')
         return f(*args, **kwargs)
@@ -24,13 +23,12 @@ def requires_auth(f):
 @app.route('/')
 def index():
     return f'<p>{session}</p><form action="/login">\
-                <button type="submit">Login</button>\
+                <button type="submit">Login with telfin</button>\
             </form>'
 
 
 @app.route('/login')
 def login():
-    print(session)
     if 'client_id' in session:
         return redirect('/dashboard')
     redirect_uri = 'http://localhost:5000/authorized'
@@ -68,8 +66,7 @@ def authorized():
 def dashboard():
     return f'<p>Hello {session["login"]} <a href="/logout">logout</a></p>\
             <a href="/extlist/">extlist</a>\
-            <a href="/randomext/">randomext</a>\
-            {session}'
+            <a href="/randomext/">randomext</a>'
 
 
 @app.route('/logout')
@@ -85,5 +82,15 @@ def logout():
 def extlist():
     headers = {'Authorization' : f'Bearer {session["token"]}'}
     r = requests.get(API_ADDR+f'/client/{session["client_id"]}/extension/', headers=headers)
-    return r.text
+    return str(r.json())
+
+@app.route('/randomext/')
+@requires_auth
+def randomext():
+    headers = {'Authorization' : f'Bearer {session["token"]}'}
+    r = requests.get(API_ADDR+f'/client/{session["client_id"]}/extension/', headers=headers)
+    exts = r.json()
+    return str(exts[random.randrange(len(exts))])
+
+
 
